@@ -64,14 +64,23 @@ def checkpoint_metadata(checkpoint: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def load_eva_x_binary(
-    checkpoint_path: str | Path,
+def load_eva_x_binary_from_checkpoint(
+    checkpoint: dict[str, Any],
     device: torch.device,
 ) -> nn.Module:
-    checkpoint = load_checkpoint(checkpoint_path, map_location="cpu")
+    if "model_state_dict" not in checkpoint:
+        raise ValueError("Checkpoint must be a dict containing 'model_state_dict'.")
 
     model = EvaXBinaryModel()
     model.load_state_dict(checkpoint["model_state_dict"], strict=True)
     model.to(device)
     model.eval()
     return model
+
+
+def load_eva_x_binary(
+    checkpoint_path: str | Path,
+    device: torch.device,
+) -> nn.Module:
+    checkpoint = load_checkpoint(checkpoint_path, map_location="cpu")
+    return load_eva_x_binary_from_checkpoint(checkpoint, device=device)

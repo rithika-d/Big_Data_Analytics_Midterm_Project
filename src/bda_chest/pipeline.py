@@ -9,7 +9,11 @@ import torch
 from torch import nn
 from torchvision import transforms
 
-from .models import class_names_from_checkpoint, load_checkpoint, load_eva_x_binary
+from .models import (
+    class_names_from_checkpoint,
+    load_checkpoint,
+    load_eva_x_binary_from_checkpoint,
+)
 from .reporting import probs_to_payload
 from .utils import select_device
 
@@ -44,7 +48,7 @@ def load_inference_bundle(
     resolved = Path(checkpoint_path).expanduser().resolve()
     checkpoint = load_checkpoint(resolved, map_location="cpu")
     device = select_device(device_hint)
-    model = load_eva_x_binary(resolved, device=device)
+    model = load_eva_x_binary_from_checkpoint(checkpoint, device=device)
 
     return InferenceBundle(
         checkpoint_path=resolved,

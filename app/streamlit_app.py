@@ -109,8 +109,6 @@ def render_inference_page(
         st.info("Upload a chest X-ray image to run inference.")
         return
 
-    image = st.session_state.setdefault("_current_uploaded_image", None)
-    del image
     from PIL import Image
 
     pil_image = Image.open(uploaded).convert("RGB")

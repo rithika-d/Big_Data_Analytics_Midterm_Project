@@ -155,13 +155,7 @@ Given the strong abnormal signal:
 Focus on prominent findings rather than subtle ones.
 """.strip()
 
-    return f"""
-A binary chest X-ray classifier assigned this image an abnormal probability of {probability:.2f}.
-
-- Describe observable imaging findings cautiously.
-- Explain uncertainty and limitations.
-- Avoid definitive diagnosis and treatment advice.
-""".strip()
+    raise ValueError(f"Unsupported reasoning tier for image analysis: {tier!r}")
 
 
 def analyze_xray_image(

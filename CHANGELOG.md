@@ -14,3 +14,5 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Added `create_eva_x_tiny()` to `eva_x.py` so inference can reconstruct EVA-X without the external MIM checkpoint.
 - Updated `README.md` with Streamlit setup instructions and research-only disclaimers.
+- Avoided double checkpoint deserialization when building the cached inference bundle.
+- Expanded `.gitignore` with the existing local-only paths and log patterns used in this repo.
