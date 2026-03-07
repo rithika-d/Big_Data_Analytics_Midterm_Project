@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file.
 - Updated `README.md` with Streamlit setup instructions and research-only disclaimers.
 - Avoided double checkpoint deserialization when building the cached inference bundle.
 - Expanded `.gitignore` with the existing local-only paths and log patterns used in this repo.
+- Removed stray duplicate workspace files with ` 2` suffixes from the persistent Codex worktree.
 ## [Unreleased]
 
 ### Added
