@@ -1,3 +1,11 @@
+numpy>=1.26,<3
+openai>=1.0,<2
+Pillow>=10.0,<12
+streamlit>=1.40,<2
+timm>=0.9.8,<2
+torch>=2.2,<3
+torchvision>=0.17,<1
+
 # Core
 torch>=2.0
 torchvision>=0.15

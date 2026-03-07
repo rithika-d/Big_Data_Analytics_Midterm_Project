@@ -1,15 +1,15 @@
 """
-Use EVA-X series as your backbone. You could get 
-EVA-X representations simply with timm. Try them 
-with your own X-ray tasks. 
+Use EVA-X series as your backbone. You could get
+EVA-X representations simply with timm. Try them
+with your own X-ray tasks.
 Enjoy!
 
 Reference:
     https://github.com/baaivision/EVA
     https://github.com/huggingface/pytorch-image-models
 Thanks for their work!
-    
-by Jingfeng Yao 
+
+by Jingfeng Yao
 from HUST-VL
 """
 
@@ -17,6 +17,7 @@ import torch
 from timm.models.eva import Eva
 from timm.layers import resample_abs_pos_embed, resample_patch_embed
 
+# fmt: off
 def checkpoint_filter_fn(
         state_dict,
         model,
@@ -95,6 +96,7 @@ def checkpoint_filter_fn(
 
     return out_dict
 
+
 class EVA_X(Eva):
     def __init__(self, **kwargs):
         super(EVA_X, self).__init__(**kwargs)
@@ -118,9 +120,11 @@ class EVA_X(Eva):
         x = self.forward_features(x)
         x = self.forward_head(x)
         return x
+# fmt: on
 
-def eva_x_tiny_patch16(pretrained=False):
-    model = EVA_X(
+
+def create_eva_x_tiny():
+    return EVA_X(
         img_size=224,
         patch_size=16,
         embed_dim=192,
@@ -131,12 +135,19 @@ def eva_x_tiny_patch16(pretrained=False):
         use_rot_pos_emb=True,
         ref_feat_shape=(14, 14),  # 224/16
     )
-    eva_ckpt = checkpoint_filter_fn(torch.load(pretrained, map_location='cpu', weights_only=False), 
-                        model)
+
+
+def eva_x_tiny_patch16(pretrained=False):
+    model = create_eva_x_tiny()
+    eva_ckpt = checkpoint_filter_fn(
+        torch.load(pretrained, map_location="cpu", weights_only=False), model
+    )
     msg = model.load_state_dict(eva_ckpt, strict=False)
     print(msg)
     return model
 
+
+# fmt: off
 def eva_x_small_patch16(pretrained=False):
     model = EVA_X(
         img_size=224,
@@ -149,11 +160,12 @@ def eva_x_small_patch16(pretrained=False):
         use_rot_pos_emb=True,
         ref_feat_shape=(14, 14),   # 224/16
     )
-    eva_ckpt = checkpoint_filter_fn(torch.load(pretrained, map_location='cpu'), 
+    eva_ckpt = checkpoint_filter_fn(torch.load(pretrained, map_location='cpu'),
                         model)
     msg = model.load_state_dict(eva_ckpt, strict=False)
     print(msg)
     return model
+
 
 def eva_x_base_patch16(pretrained=False):
     model = EVA_X(
@@ -169,18 +181,20 @@ def eva_x_base_patch16(pretrained=False):
         use_rot_pos_emb=True,
         ref_feat_shape=(14, 14),  # 224/16
     )
-    eva_ckpt = checkpoint_filter_fn(torch.load(pretrained, map_location='cpu'), 
+    eva_ckpt = checkpoint_filter_fn(torch.load(pretrained, map_location='cpu'),
                         model)
     msg = model.load_state_dict(eva_ckpt, strict=False)
     print(msg)
     return model
+
 
 if __name__ == '__main__':
 
     eva_x_ti_pt = '/home/jingfengyao/code/medical/EVA-X/classification/pretrained/eva_x_ti_16.pt'
     eva_x_s_pt = '/home/jingfengyao/code/medical/EVA-X/classification/pretrained/eva_x_s_16.pt'
     eva_x_b_pt = '/home/jingfengyao/code/medical/EVA-X/classification/pretrained/eva_x_b_16.pt'
-    
+
     eva_x_ti = eva_x_tiny_patch16(pretrained=eva_x_ti_pt)
     eva_x_s = eva_x_small_patch16(pretrained=eva_x_s_pt)
     eva_x_b = eva_x_base_patch16(pretrained=eva_x_b_pt)
+# fmt: on

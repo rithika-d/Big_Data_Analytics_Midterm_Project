@@ -1,4 +1,16 @@
 .DS_Store
+*.log
+.claude/
+.codex/
+.ipynb_checkpoints/
+.venv/
+AGENTS.md
+CLAUDE.md
+__pycache__/
+codex/
+codex_prompts/
+logs/
+private/
 
 # Logs
 *.log
