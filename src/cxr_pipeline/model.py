@@ -38,7 +38,15 @@ def _to_device(device: str | torch.device) -> torch.device:
 
 
 def _load_checkpoint(ckpt_path: str) -> dict[str, Any]:
-    return torch.load(ckpt_path, map_location="cpu")
+    return torch.load(ckpt_path, map_location="cpu", weights_only=False)
+
+
+def _checkpoint_metadata(checkpoint: dict[str, Any]) -> CheckpointMetadata:
+    return {
+        "epoch": checkpoint["epoch"],
+        "best_val_loss": checkpoint["best_val_loss"],
+        "class_to_idx": checkpoint.get("class_to_idx"),
+    }
 
 
 def create_model(
@@ -57,7 +65,6 @@ def load_model_for_inference(
     model = create_model(pretrained_weights_path, device)
     checkpoint = _load_checkpoint(ckpt_path)
     model.load_state_dict(checkpoint["model_state_dict"])
-    model.to(_to_device(device))
     model.eval()
     return model
 
@@ -69,11 +76,7 @@ def resume_from_checkpoint(
     weight_decay: float = 1e-4,
 ) -> tuple[optim.Optimizer, CheckpointMetadata]:
     checkpoint = _load_checkpoint(ckpt_path)
+    model.load_state_dict(checkpoint["model_state_dict"])
     optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
     optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-    metadata: CheckpointMetadata = {
-        "epoch": checkpoint["epoch"],
-        "best_val_loss": checkpoint["best_val_loss"],
-        "class_to_idx": checkpoint.get("class_to_idx"),
-    }
-    return optimizer, metadata
+    return optimizer, _checkpoint_metadata(checkpoint)

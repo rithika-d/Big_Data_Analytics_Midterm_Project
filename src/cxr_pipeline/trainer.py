@@ -5,7 +5,6 @@ from typing import Any
 
 import pandas as pd
 import torch
-from torch.cuda.amp import GradScaler, autocast
 
 
 class Trainer:
@@ -15,7 +14,8 @@ class Trainer:
         self.optimizer = optimizer
         self.device = device
         self.use_amp = torch.cuda.is_available()
-        self.scaler = GradScaler(enabled=self.use_amp)
+        self.amp_device = "cuda" if self.use_amp else "cpu"
+        self.scaler = torch.amp.GradScaler(self.amp_device, enabled=self.use_amp)
 
     def train_epoch(self, loader) -> float:
         self.model.train()
@@ -27,7 +27,7 @@ class Trainer:
 
             self.optimizer.zero_grad(set_to_none=True)
 
-            with autocast(enabled=self.use_amp):
+            with torch.amp.autocast(self.amp_device, enabled=self.use_amp):
                 logits = self.model(image)
                 loss = self.criterion(logits, label)
 

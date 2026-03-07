@@ -9,11 +9,7 @@ from torch import optim
 
 from .cxr_pipeline.data import create_dataloaders, load_datasets
 from .cxr_pipeline.evaluation import evaluate_full
-from .cxr_pipeline.model import (
-    create_model,
-    load_model_for_inference,
-    resume_from_checkpoint,
-)
+from .cxr_pipeline.model import create_model, resume_from_checkpoint
 from .cxr_pipeline.trainer import Trainer, train_with_early_stopping
 
 
@@ -59,9 +55,7 @@ def main() -> None:
     start_epoch = 0
 
     if args.resume_from:
-        model = load_model_for_inference(
-            args.resume_from, args.pretrained_weights, device
-        )
+        model = create_model(args.pretrained_weights, device)
         optimizer, metadata = resume_from_checkpoint(
             model,
             args.resume_from,
