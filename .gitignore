@@ -1,0 +1,7 @@
+.DS_Store
+.codex/
+.ipynb_checkpoints/
+.venv/
+__pycache__/
+codex_prompts/
+
