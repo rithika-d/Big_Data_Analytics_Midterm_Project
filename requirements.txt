@@ -6,3 +6,25 @@ timm>=0.9.8,<2
 torch>=2.2,<3
 torchvision>=0.17,<1
 
+# Core
+torch>=2.0
+torchvision>=0.15
+timm>=0.9.0
+numpy>=1.23.5
+Pillow>=9.5.0
+
+# Data & metrics
+pandas>=2.0
+scikit-learn>=1.3
+scipy>=1.10
+
+# Visualization
+matplotlib>=3.7
+seaborn>=0.13
+
+# Transformers / LLM (CheXagent, Llama radiology model)
+transformers>=4.35
+accelerate>=0.25
+
+# EVA-X optional (only needed if using upstream EVA-X training scripts)
+# einops>=0.6.1

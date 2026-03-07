@@ -11,3 +11,19 @@ codex/
 codex_prompts/
 logs/
 private/
+
+# Logs
+*.log
+logs/
+
+# Python
+__pycache__/
+.ipynb_checkpoints/
+
+private/
+codex_prompts/
+
+.claude/
+.codex/
+AGENTS.md
+CLAUDE.md
