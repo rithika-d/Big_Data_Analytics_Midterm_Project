@@ -94,11 +94,52 @@ def maybe_answer_question(
         }
 
 
+def render_chat_component(payload: dict[str, Any], model_name: str) -> None:
+    if AGENT_CHAT_STATE_KEY not in st.session_state:
+        st.session_state[AGENT_CHAT_STATE_KEY] = []
+
+    messages = st.session_state[AGENT_CHAT_STATE_KEY]
+    
+    st.divider()
+    st.subheader("Chat with Radiology Assistant")
+    st.caption("Ask questions about this specific analysis.")
+
+    clear_col, _ = st.columns([1, 4])
+    with clear_col:
+        if st.button("Clear Chat", key="clear_chat_button", width="stretch"):
+            st.session_state[AGENT_CHAT_STATE_KEY] = []
+            st.rerun()
+
+    for message in messages:
+        with st.chat_message(str(message.get("role", "assistant"))):
+            st.markdown(str(message.get("content", "")))
+
+    question = st.chat_input("Ask about findings, confidence, or rationale...", key="chat_input_box")
+    if question:
+        messages.append({"role": "user", "content": question})
+        with st.chat_message("user"):
+            st.markdown(question)
+
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                answer_result = maybe_answer_question(payload, question, model_name)
+            if bool(answer_result.get("ok")):
+                answer_text = str(answer_result.get("text", "")).strip()
+                st.markdown(answer_text)
+                messages.append({"role": "assistant", "content": answer_text})
+            else:
+                error_text = str(answer_result.get("error", "Unknown error"))
+                st.error(error_text)
+                messages.append({"role": "assistant", "content": f"Error: {error_text}"})
+        st.session_state[AGENT_CHAT_STATE_KEY] = messages
+
+
 def render_inference_page(
     checkpoint_path: str,
     threshold: float,
     llm_enabled: bool,
     llm_model: str,
+    llm_qa_model: str,
 ) -> None:
     uploaded = st.file_uploader(
         "Upload chest X-ray image",
@@ -107,6 +148,11 @@ def render_inference_page(
     )
     if uploaded is None:
         st.info("Upload a chest X-ray image to run inference.")
+        # Clear state if no file is uploaded to avoid stale chats
+        if LATEST_REPORT_STATE_KEY in st.session_state:
+             del st.session_state[LATEST_REPORT_STATE_KEY]
+        if AGENT_CHAT_STATE_KEY in st.session_state:
+             del st.session_state[AGENT_CHAT_STATE_KEY]
         return
 
     from PIL import Image
@@ -114,9 +160,20 @@ def render_inference_page(
     pil_image = Image.open(uploaded).convert("RGB")
     left_col, right_col = st.columns([1, 1.2])
     with left_col:
-        st.image(pil_image, caption=uploaded.name, width="stretch")
+        st.image(pil_image, caption=uploaded.name, use_container_width=True)
 
     if not st.button("Analyze Image", type="primary", width="stretch"):
+        # If we already have a result for THIS image, show the chat
+        cached_payload = st.session_state.get(LATEST_REPORT_STATE_KEY)
+        if cached_payload and cached_payload.get("source_filename") == uploaded.name:
+            with right_col:
+                st.success("Analysis loaded from session.")
+                st.subheader("Impression")
+                st.write(cached_payload["impression"])
+                if cached_payload.get("reasoning"):
+                    st.subheader("LLM Reasoning")
+                    st.write(cached_payload["reasoning"])
+                render_chat_component(cached_payload, llm_qa_model)
         return
 
     with right_col:
@@ -178,6 +235,8 @@ def render_inference_page(
         )
 
         st.session_state[LATEST_REPORT_STATE_KEY] = dict(payload)
+        st.session_state[AGENT_CHAT_STATE_KEY] = [] # Reset chat for new analysis
+        
         st.download_button(
             label="Download Report JSON",
             data=json.dumps(payload, indent=2),
@@ -185,6 +244,8 @@ def render_inference_page(
             mime="application/json",
             width="stretch",
         )
+        
+        render_chat_component(payload, llm_qa_model)
 
 
 def render_model_info_page(checkpoint_path: str) -> None:
@@ -267,41 +328,7 @@ def render_ask_agent_page(llm_qa_model: str) -> None:
             }
         )
 
-    if AGENT_CHAT_STATE_KEY not in st.session_state:
-        st.session_state[AGENT_CHAT_STATE_KEY] = []
-
-    messages = st.session_state[AGENT_CHAT_STATE_KEY]
-    clear_col, _ = st.columns([1, 4])
-    with clear_col:
-        if st.button("Clear Chat", width="stretch"):
-            st.session_state[AGENT_CHAT_STATE_KEY] = []
-            st.rerun()
-
-    for message in messages:
-        with st.chat_message(str(message.get("role", "assistant"))):
-            st.markdown(str(message.get("content", "")))
-
-    question = st.chat_input("Ask a question about findings, confidence, or rationale.")
-    if not question:
-        return
-
-    messages.append({"role": "user", "content": question})
-    with st.chat_message("user"):
-        st.markdown(question)
-
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            answer_result = maybe_answer_question(payload, question, llm_qa_model)
-        if bool(answer_result.get("ok")):
-            answer_text = str(answer_result.get("text", "")).strip()
-            st.markdown(answer_text)
-            messages.append({"role": "assistant", "content": answer_text})
-        else:
-            error_text = str(answer_result.get("error", "Unknown error"))
-            st.error(error_text)
-            messages.append({"role": "assistant", "content": f"Error: {error_text}"})
-
-    st.session_state[AGENT_CHAT_STATE_KEY] = messages
+    render_chat_component(payload, llm_qa_model)
 
 
 def main() -> None:
@@ -349,7 +376,7 @@ def main() -> None:
         st.markdown("EECS E6893 Big Data Analytics Midterm Project")
 
     if page == "Inference":
-        render_inference_page(checkpoint_path, threshold, llm_enabled, llm_model)
+        render_inference_page(checkpoint_path, threshold, llm_enabled, llm_model, llm_qa_model)
     elif page == "Model Info":
         render_model_info_page(checkpoint_path)
     else:

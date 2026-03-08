@@ -5,6 +5,7 @@ streamlit>=1.40,<2
 timm>=0.9.8,<2
 torch>=2.2,<3
 torchvision>=0.17,<1
+python-dotenv>=1.0.0
 
 # Core
 torch>=2.0
@@ -23,8 +24,12 @@ matplotlib>=3.7
 seaborn>=0.13
 
 # Transformers / LLM (CheXagent, Llama radiology model)
-transformers>=4.35
+transformers>=4.40,<5.0.0
 accelerate>=0.25
+evaluate>=0.4.0
+rouge_score>=0.1.2
+bitsandbytes>=0.43.0
+scipy>=1.10
 
 # EVA-X optional (only needed if using upstream EVA-X training scripts)
 # einops>=0.6.1
