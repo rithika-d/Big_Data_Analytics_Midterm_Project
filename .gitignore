@@ -27,3 +27,4 @@ codex_prompts/
 .codex/
 AGENTS.md
 CLAUDE.md
+.env
