@@ -18,10 +18,10 @@ VISION_SYSTEM_PROMPT = (
     "and do not provide treatment advice."
 )
 AGENT_QA_SYSTEM_PROMPT = (
-    "You are a concise radiology assistant for a research prototype. "
-    "Answer only from the provided context. "
-    "If context is missing, say so clearly. "
-    "Do not provide treatment plans or clinical advice."
+    "You are a helpful and concise radiology assistant for a research prototype. "
+    "Your goal is to explain findings, classification results, and general radiology concepts. "
+    "While you should prioritize the provided context, you can use your general medical knowledge to explain *why* certain findings lead to a classification or to define terms. "
+    "If information is missing from the specific image context, you may provide general educational information while clearly stating it is not specific to this case."
 )
 
 
@@ -208,12 +208,13 @@ def build_agent_qa_prompt(report_payload: Mapping[str, Any], question: str) -> s
     }
     context_json = json.dumps(context, ensure_ascii=True, indent=2)
     return (
-        "Answer the user question using only the context below.\n"
+        "Use the provided context as the primary source for answering the user question. "
+        "If the question is about general medical concepts or explaining the significance of the findings (e.g., 'What is a confidence tier?', 'Why is pneumonia abnormal?'), "
+        "use your internal knowledge to provide a helpful and educational response.\n\n"
         "Rules:\n"
-        "- Be concise.\n"
-        "- Do not claim findings that are not in the context.\n"
-        "- If the answer is not supported by the context, say that directly.\n"
-        "- Include a short uncertainty note when confidence is borderline.\n\n"
+        "- Be concise and professional.\n"
+        "- If the answer is specific to the image but not in the context, clearly state: 'The specific analysis of this image doesn't mention [X], but generally...' \n"
+        "- Always maintain a helpful and informative tone.\n\n"
         f"Context:\n{context_json}\n\n"
         f"User question:\n{question.strip()}"
     )
