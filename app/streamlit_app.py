@@ -15,6 +15,7 @@ if str(ROOT) not in sys.path:
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from bda_chest.evaluation import evaluate_response, load_medgemma_judge
 from bda_chest.llm import (
     DEFAULT_LLAMA_MODEL,
     analyze_xray_image,
@@ -65,6 +66,14 @@ PROVIDER_OPENAI = "OpenAI (API)"
 @st.cache_resource(show_spinner="Loading Llama radiology model...")
 def load_llama_cached():
     return load_llama_model()
+
+
+# MedGemma judge — adapted from Radiology_Assistant_Evaluation.ipynb (cell 3).
+# The notebook uses MedGemma as an LLM judge to score radiology assistant responses
+# on a 1-5 correctness scale.
+@st.cache_resource(show_spinner="Loading MedGemma evaluation model...")
+def load_medgemma_cached():
+    return load_medgemma_judge()
 
 
 def maybe_run_reasoning(
@@ -200,6 +209,7 @@ def render_inference_page(
     llm_provider: str,
     llm_model: str,
     llm_qa_model: str,
+    eval_enabled: bool = False,
 ) -> None:
     uploaded = st.file_uploader(
         "Upload chest X-ray image",
@@ -276,6 +286,38 @@ def render_inference_page(
             if bool(reasoning_result.get("ok")):
                 payload["reasoning"] = str(reasoning_result.get("text", "")).strip()
                 st.write(payload["reasoning"])
+
+                # MedGemma evaluation — adapted from Radiology_Assistant_Evaluation.ipynb
+                # cell 5: feedback = judge.evaluate(q, answer, payload['impression'], ...)
+                if eval_enabled and payload["reasoning"]:
+                    st.subheader("MedGemma Evaluation")
+                    with st.spinner("Running MedGemma judge..."):
+                        try:
+                            judge_model, judge_tokenizer = load_medgemma_cached()
+                            eval_result = evaluate_response(
+                                model=judge_model,
+                                tokenizer=judge_tokenizer,
+                                question="What are the radiologic findings?",
+                                answer=payload["reasoning"],
+                                context=str(payload.get("impression", "")),
+                                ground_truth="Verify clinical accuracy.",
+                            )
+                            score = eval_result.get("correctness_score")
+                            justification = eval_result.get("justification")
+                            if score is not None:
+                                st.metric("Correctness Score", f"{score} / 5")
+                            if justification:
+                                st.info(justification)
+                            elif not score:
+                                # JSON parsing failed; show raw judge output
+                                st.caption("Raw judge output:")
+                                st.text(eval_result.get("raw", ""))
+                            payload["eval_score"] = score
+                            payload["eval_justification"] = justification
+                        except Exception as exc:
+                            st.warning(
+                                f"Evaluation failed: {type(exc).__name__}: {exc}"
+                            )
             else:
                 payload["reasoning_error"] = str(
                     reasoning_result.get("error", "Unknown error")
@@ -423,6 +465,14 @@ def main() -> None:
             disabled=(page != "Inference"),
             help="Llama runs locally with GPU. OpenAI requires OPENAI_API_KEY.",
         )
+        # MedGemma evaluation toggle — from Radiology_Assistant_Evaluation.ipynb.
+        # Uses google/medgemma-1.5-4b-it to score reasoning on a 1-5 scale.
+        eval_enabled = st.checkbox(
+            "MedGemma evaluation",
+            value=False,
+            disabled=(not llm_enabled or page != "Inference"),
+            help="Score LLM reasoning with MedGemma judge (requires GPU).",
+        )
         llm_provider = st.selectbox(
             "LLM Provider",
             [PROVIDER_LLAMA, PROVIDER_OPENAI],
@@ -455,6 +505,7 @@ def main() -> None:
             llm_provider,
             llm_model,
             llm_qa_model,
+            eval_enabled=eval_enabled,
         )
     elif page == "Model Info":
         render_model_info_page(checkpoint_path)
