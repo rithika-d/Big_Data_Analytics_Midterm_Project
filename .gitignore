@@ -2,6 +2,10 @@
 
 private/
 .venv/
+.env
+
+# Coding
+*.sublime*
 
 # Logs
 *.log
@@ -20,4 +24,3 @@ __pycache__/
 codex_prompts/
 AGENTS.md
 CLAUDE.md
-.env
