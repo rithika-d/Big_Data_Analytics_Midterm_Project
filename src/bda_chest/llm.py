@@ -5,7 +5,6 @@ import os
 from pathlib import Path
 from typing import Any, Mapping
 
-from openai import OpenAI
 from PIL import Image
 
 from .utils import pil_to_base64
@@ -76,7 +75,9 @@ def resolve_openai_api_key(explicit_key: str | None = None) -> str:
 def get_openai_client(
     api_key: str | None = None,
     base_url: str | None = None,
-) -> OpenAI:
+):
+    from openai import OpenAI
+
     key = resolve_openai_api_key(api_key)
     if not key:
         raise ValueError(
@@ -238,4 +239,128 @@ def answer_question_about_report(
     text = _extract_output_text(response)
     if not text:
         raise RuntimeError("Model returned an empty answer.")
+    return text
+
+
+# ---------------------------------------------------------------------------
+# Llama (local) backend
+# ---------------------------------------------------------------------------
+
+DEFAULT_LLAMA_MODEL = "0llheaven/Llama-3.2-11B-Vision-Radiology-mini"
+
+
+def load_llama_model(
+    model_name: str = DEFAULT_LLAMA_MODEL,
+    load_in_4bit: bool = True,
+):
+    from unsloth import FastVisionModel
+
+    model, tokenizer = FastVisionModel.from_pretrained(
+        model_name,
+        load_in_4bit=load_in_4bit,
+        use_gradient_checkpointing="unsloth",
+    )
+    FastVisionModel.for_inference(model)
+    return model, tokenizer
+
+
+def _llama_generate_with_image(model, tokenizer, image, prompt, max_new_tokens=400):
+    import torch
+
+    image_copy = image.copy()
+    image_copy.thumbnail((448, 448), Image.Resampling.LANCZOS)
+    messages = [
+        {
+            "role": "user",
+            "content": [{"type": "image"}, {"type": "text", "text": prompt}],
+        }
+    ]
+    text_prompt = tokenizer.apply_chat_template(messages, add_generation_prompt=True)
+    inputs = tokenizer(
+        text=text_prompt,
+        images=image_copy,
+        add_special_tokens=False,
+        return_tensors="pt",
+    )
+    device = next(model.parameters()).device
+    inputs = {
+        key: value.to(device) if torch.is_tensor(value) else value
+        for key, value in inputs.items()
+    }
+    with torch.no_grad():
+        output = model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            do_sample=True,
+            temperature=0.6,
+            top_p=0.9,
+            use_cache=False,
+        )
+    input_len = inputs["input_ids"].shape[-1]
+    return tokenizer.decode(output[0][input_len:], skip_special_tokens=True).strip()
+
+
+def _llama_generate_text_only(model, tokenizer, prompt, max_new_tokens=260):
+    import torch
+
+    messages = [
+        {
+            "role": "user",
+            "content": [{"type": "text", "text": prompt}],
+        }
+    ]
+    text_prompt = tokenizer.apply_chat_template(messages, add_generation_prompt=True)
+    inputs = tokenizer(
+        text=text_prompt,
+        add_special_tokens=False,
+        return_tensors="pt",
+    )
+    device = next(model.parameters()).device
+    inputs = {
+        key: value.to(device) if torch.is_tensor(value) else value
+        for key, value in inputs.items()
+    }
+    with torch.no_grad():
+        output = model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            do_sample=True,
+            temperature=0.1,
+            top_p=0.9,
+            use_cache=False,
+        )
+    input_len = inputs["input_ids"].shape[-1]
+    return tokenizer.decode(output[0][input_len:], skip_special_tokens=True).strip()
+
+
+def analyze_xray_image_llama(
+    image: Image.Image,
+    p_abnormal: float,
+    tier: str,
+    model,
+    tokenizer,
+    max_new_tokens: int = 400,
+) -> str:
+    prompt = VISION_SYSTEM_PROMPT + "\n\n" + build_reasoning_prompt(p_abnormal, tier)
+    text = _llama_generate_with_image(model, tokenizer, image, prompt, max_new_tokens)
+    if not text:
+        raise RuntimeError("Llama model returned an empty reasoning response.")
+    return text
+
+
+def answer_question_about_report_llama(
+    report_payload: Mapping[str, Any],
+    question: str,
+    model,
+    tokenizer,
+    max_new_tokens: int = 260,
+) -> str:
+    prompt = (
+        AGENT_QA_SYSTEM_PROMPT
+        + "\n\n"
+        + build_agent_qa_prompt(report_payload, question)
+    )
+    text = _llama_generate_text_only(model, tokenizer, prompt, max_new_tokens)
+    if not text:
+        raise RuntimeError("Llama model returned an empty answer.")
     return text

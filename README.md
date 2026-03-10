@@ -1,4 +1,4 @@
-# Big_Data_Analytics_Midterm_Project
+# Big Data Analytics Midterm Project
 
 EECS E6893: Big Data Analytics midterm project.
 
@@ -6,91 +6,82 @@ Research prototype only. Not for clinical use.
 
 ## Overview
 
-This repo contains a two-stage chest X-ray workflow:
+A two-stage chest X-ray diagnostic pipeline:
 
-- Stage 1: EVA-X Tiny binary classifier for normal vs. pneumonia-like abnormality.
-- Stage 2: optional vision LLM reasoning when the classifier predicts abnormal.
-
-The original training and exploration notebooks remain in the repo:
-
-- `Big_Data_Analytics_Midterm_Project.ipynb`
-- `Big_Data_Analytics_Midterm2.ipynb`
+1. **Stage 1 — Binary classifier**: EVA-X Tiny Vision Transformer fine-tuned for normal vs. pneumonia classification.
+2. **Stage 2 — Reasoning LLM**: When the classifier predicts abnormal, a vision-language model generates radiologic findings using confidence-tiered prompting.
 
 EVA-X model code is derived and adapted from [hustvl/EVA-X](https://github.com/hustvl/EVA-X).
 
-The pretrained EVA-X MIM weights referenced by the notebooks can be downloaded from [MapleF/eva_x](https://huggingface.co/MapleF/eva_x/blob/main/eva_x_tiny_patch16_merged520k_mim.pt).
-
-The image data used for the project are sourced from the [Kaggle Chest X-Ray Pneumonia dataset](https://www.kaggle.com/datasets/paultimothymooney/chest-xray-pneumonia/data).
-
-## Streamlit App
-
-The repo now includes a lightweight Streamlit interface for local inference and report Q&A.
-
-### Install
-
-```bash
-pip install -r requirements.txt
-```
-
-### Run
-
-```bash
-streamlit run app/streamlit_app.py
-```
-
-### Notes
-
-- `OPENAI_API_KEY` in the environment or a local `.env` file is required for LLM features.
-- LLM features are optional. The EVA-X classifier works without an API key.
-- `requirements.txt` is the canonical dependency file for the Streamlit app.
-- `EVA-X_requirements .txt` is kept only as a historical upstream reference.
-
-## Models
-
-- EVA-X Tiny checkpoint: `eva_x_tiny_binary_best.pt`
-- Optional notebook-era LLM reference: [0llheaven/Llama-3.2-11B-Vision-Radiology-mini](https://huggingface.co/0llheaven/Llama-3.2-11B-Vision-Radiology-mini)
-EECS E6893 Big Data Analytics midterm project. The repository now includes the original Colab notebooks and a runnable Python package under `src/` for training and diagnosis workflows.
-
 ## Project Layout
 
-- `Big_Data_Analytics_Midterm_Project.ipynb`: original training notebook
-- `Big_Data_Analytics_Midterm2.ipynb`: original inference notebook
-- `src/cxr_pipeline/`: shared package extracted from the notebooks
-- `src/train.py`: CLI entry point for classifier training
-- `src/diagnose.py`: CLI entry point for classifier + LLM diagnosis
-- `eva_x.py`: original root EVA-X module kept for notebook compatibility
+```
+app/streamlit_app.py              Streamlit UI (inference, chat, evaluation)
+src/bda_chest/                    Core package for the Streamlit app
+  llm.py                          LLM backends (Llama local + OpenAI API)
+  evaluation.py                   MedGemma judge for scoring LLM responses
+  models.py, pipeline.py, ...     EVA-X loading, inference, reporting
+src/cxr_pipeline/                 Package extracted from original notebooks
+src/train.py                      CLI: classifier training
+src/diagnose.py                   CLI: classifier + LLM diagnosis
+scripts/smoke_test.py             Integration smoke test (CPU, no LLM)
+eva_x.py                          Root EVA-X module (notebook compatibility)
+Big_Data_Analytics_Midterm_Project.ipynb   Training notebook (Colab)
+Big_Data_Analytics_Midterm2.ipynb          Inference notebook (Colab)
+Radiology_Assistant_Evaluation.ipynb      Evaluation notebook (Colab)
+```
 
 ## Model Assets
 
-- EVA-X pretrained weights: [MapleF/eva_x](https://huggingface.co/MapleF/eva_x/blob/main/eva_x_tiny_patch16_merged520k_mim.pt)
-- Llama radiology model: [0llheaven/Llama-3.2-11B-Vision-Radiology-mini](https://huggingface.co/0llheaven/Llama-3.2-11B-Vision-Radiology-mini)
-- CheXagent findings model: [StanfordAIMI/CheXagent-2-3b-srrg-findings](https://huggingface.co/StanfordAIMI/CheXagent-2-3b-srrg-findings)
-
-Image data (training, validation, test) used for the project are sourced from the [Kaggle Chest X-Ray Pneumonia dataset](https://www.kaggle.com/datasets/paultimothymooney/chest-xray-pneumonia/data).
+| Asset | Source |
+|---|---|
+| EVA-X pretrained MIM weights | [MapleF/eva_x](https://huggingface.co/MapleF/eva_x/blob/main/eva_x_tiny_patch16_merged520k_mim.pt) |
+| Trained binary checkpoint | `eva_x_tiny_binary_best.pt` (included in repo) |
+| Llama radiology model | [0llheaven/Llama-3.2-11B-Vision-Radiology-mini](https://huggingface.co/0llheaven/Llama-3.2-11B-Vision-Radiology-mini) |
+| CheXagent findings model | [StanfordAIMI/CheXagent-2-3b-srrg-findings](https://huggingface.co/StanfordAIMI/CheXagent-2-3b-srrg-findings) |
+| MedGemma evaluation judge | [google/medgemma-1.5-4b-it](https://huggingface.co/google/medgemma-1.5-4b-it) |
+| Image dataset | [Kaggle Chest X-Ray Pneumonia](https://www.kaggle.com/datasets/paultimothymooney/chest-xray-pneumonia/data) |
 
 ## Installation
 
-Core dependencies:
+Core dependencies (Streamlit app + CLI):
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Llama backend:
+Llama backend (requires NVIDIA/AMD/Intel GPU):
 
 ```bash
 pip install -r requirements-llama.txt
 ```
 
-CheXagent backend:
+CheXagent backend (CLI only):
 
 ```bash
 pip install -r requirements-chexagent.txt
 ```
 
-## Usage
+## Running the Project
 
-Train the binary EVA-X classifier:
+### Option 1: Streamlit UI
+
+The recommended way to interact with the project. Supports image upload, LLM reasoning, Q&A chat, and MedGemma evaluation.
+
+```bash
+streamlit run app/streamlit_app.py
+```
+
+**Sidebar settings:**
+- **LLM Provider**: Llama (Local) runs `0llheaven/Llama-3.2-11B-Vision-Radiology-mini` on GPU via `unsloth`. OpenAI (API) uses `gpt-4.1` and requires `OPENAI_API_KEY` in `.env` or the environment.
+- **MedGemma evaluation**: Scores LLM reasoning on a 1–5 correctness scale using `google/medgemma-1.5-4b-it` (requires GPU).
+- LLM features are optional — the EVA-X classifier works without them.
+
+### Option 2: CLI Scripts
+
+Headless training and diagnosis, intended for Colab or GPU servers.
+
+Train the binary classifier:
 
 ```bash
 python -m src.train \
@@ -99,7 +90,7 @@ python -m src.train \
   --checkpoint-dir ./checkpoints
 ```
 
-Run diagnosis with the Llama backend:
+Run diagnosis (classifier + LLM reasoning):
 
 ```bash
 python -m src.diagnose \
@@ -141,3 +132,26 @@ Options for `--model`: `openai` (default RAG), `chexagent`, or `llama`.
 Results will be saved to `evaluation_report.json`.
 
 The root `eva_x.py` module remains available so the original notebooks can still import it without changes.
+The `--backend` flag accepts `llama` or `chexagent`.
+
+### Option 3: Colab Notebooks
+
+The original notebooks are designed for Google Colab with GPU. They mount Google Drive for dataset and checkpoint access.
+
+- `Big_Data_Analytics_Midterm_Project.ipynb` — Training + CheXagent inference
+- `Big_Data_Analytics_Midterm2.ipynb` — Llama inference with confidence-tiered prompting
+- `Radiology_Assistant_Evaluation.ipynb` — End-to-end evaluation with MedGemma judge
+
+## Environment Variables
+
+| Variable | Required for |
+|---|---|
+| `OPENAI_API_KEY` | OpenAI LLM provider in Streamlit UI; Evaluation notebook |
+| `HF_TOKEN` | Downloading gated models (MedGemma) |
+| `KAGGLE_USERNAME` / `KAGGLE_KEY` | Downloading dataset in Evaluation notebook |
+
+Create a `.env` file in the project root (already gitignored):
+
+```
+OPENAI_API_KEY=sk-...
+```

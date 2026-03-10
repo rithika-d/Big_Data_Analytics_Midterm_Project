@@ -15,7 +15,15 @@ if str(ROOT) not in sys.path:
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from bda_chest.llm import analyze_xray_image, answer_question_about_report
+from bda_chest.evaluation import evaluate_response, load_medgemma_judge
+from bda_chest.llm import (
+    DEFAULT_LLAMA_MODEL,
+    analyze_xray_image,
+    analyze_xray_image_llama,
+    answer_question_about_report,
+    answer_question_about_report_llama,
+    load_llama_model,
+)
 from bda_chest.models import checkpoint_metadata, load_checkpoint
 from bda_chest.pipeline import infer_from_pil, load_inference_bundle
 from bda_chest.version import APP_VERSION
@@ -51,11 +59,46 @@ def get_checkpoint_metadata(path: Path) -> dict[str, Any]:
     )
 
 
+PROVIDER_LLAMA = "Llama (Local)"
+PROVIDER_OPENAI = "OpenAI (API)"
+
+
+@st.cache_resource(show_spinner="Loading Llama radiology model...")
+def load_llama_cached():
+    return load_llama_model()
+
+
+# MedGemma judge — adapted from Radiology_Assistant_Evaluation.ipynb (cell 3).
+# The notebook uses MedGemma as an LLM judge to score radiology assistant responses
+# on a 1-5 correctness scale.
+@st.cache_resource(show_spinner="Loading MedGemma evaluation model...")
+def load_medgemma_cached():
+    return load_medgemma_judge()
+
+
 def maybe_run_reasoning(
     image,
     payload: dict[str, Any],
+    provider: str,
     model_name: str,
 ) -> dict[str, Any]:
+    if provider == PROVIDER_LLAMA:
+        try:
+            llama_model, llama_tokenizer = load_llama_cached()
+            reasoning = analyze_xray_image_llama(
+                image=image,
+                p_abnormal=float(payload["p_abnormal"]),
+                tier=str(payload["confidence_tier"]),
+                model=llama_model,
+                tokenizer=llama_tokenizer,
+            )
+            return {"ok": True, "model": DEFAULT_LLAMA_MODEL, "text": reasoning}
+        except Exception as exc:
+            return {
+                "ok": False,
+                "model": DEFAULT_LLAMA_MODEL,
+                "error": f"{type(exc).__name__}: {exc}",
+            }
     chosen_model = model_name.strip() or "gpt-4.1"
     try:
         reasoning = analyze_xray_image(
@@ -76,8 +119,25 @@ def maybe_run_reasoning(
 def maybe_answer_question(
     payload: dict[str, Any],
     question: str,
+    provider: str,
     model_name: str,
 ) -> dict[str, Any]:
+    if provider == PROVIDER_LLAMA:
+        try:
+            llama_model, llama_tokenizer = load_llama_cached()
+            answer = answer_question_about_report_llama(
+                report_payload=payload,
+                question=question,
+                model=llama_model,
+                tokenizer=llama_tokenizer,
+            )
+            return {"ok": True, "model": DEFAULT_LLAMA_MODEL, "text": answer}
+        except Exception as exc:
+            return {
+                "ok": False,
+                "model": DEFAULT_LLAMA_MODEL,
+                "error": f"{type(exc).__name__}: {exc}",
+            }
     chosen_model = model_name.strip() or "gpt-4.1-mini"
     try:
         answer = answer_question_about_report(
@@ -94,12 +154,14 @@ def maybe_answer_question(
         }
 
 
-def render_chat_component(payload: dict[str, Any], model_name: str) -> None:
+def render_chat_component(
+    payload: dict[str, Any], provider: str, model_name: str
+) -> None:
     if AGENT_CHAT_STATE_KEY not in st.session_state:
         st.session_state[AGENT_CHAT_STATE_KEY] = []
 
     messages = st.session_state[AGENT_CHAT_STATE_KEY]
-    
+
     st.divider()
     st.subheader("Chat with Radiology Assistant")
     st.caption("Ask questions about this specific analysis.")
@@ -114,7 +176,9 @@ def render_chat_component(payload: dict[str, Any], model_name: str) -> None:
         with st.chat_message(str(message.get("role", "assistant"))):
             st.markdown(str(message.get("content", "")))
 
-    question = st.chat_input("Ask about findings, confidence, or rationale...", key="chat_input_box")
+    question = st.chat_input(
+        "Ask about findings, confidence, or rationale...", key="chat_input_box"
+    )
     if question:
         messages.append({"role": "user", "content": question})
         with st.chat_message("user"):
@@ -122,7 +186,9 @@ def render_chat_component(payload: dict[str, Any], model_name: str) -> None:
 
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
-                answer_result = maybe_answer_question(payload, question, model_name)
+                answer_result = maybe_answer_question(
+                    payload, question, provider, model_name
+                )
             if bool(answer_result.get("ok")):
                 answer_text = str(answer_result.get("text", "")).strip()
                 st.markdown(answer_text)
@@ -130,7 +196,9 @@ def render_chat_component(payload: dict[str, Any], model_name: str) -> None:
             else:
                 error_text = str(answer_result.get("error", "Unknown error"))
                 st.error(error_text)
-                messages.append({"role": "assistant", "content": f"Error: {error_text}"})
+                messages.append(
+                    {"role": "assistant", "content": f"Error: {error_text}"}
+                )
         st.session_state[AGENT_CHAT_STATE_KEY] = messages
 
 
@@ -138,8 +206,10 @@ def render_inference_page(
     checkpoint_path: str,
     threshold: float,
     llm_enabled: bool,
+    llm_provider: str,
     llm_model: str,
     llm_qa_model: str,
+    eval_enabled: bool = False,
 ) -> None:
     uploaded = st.file_uploader(
         "Upload chest X-ray image",
@@ -150,9 +220,9 @@ def render_inference_page(
         st.info("Upload a chest X-ray image to run inference.")
         # Clear state if no file is uploaded to avoid stale chats
         if LATEST_REPORT_STATE_KEY in st.session_state:
-             del st.session_state[LATEST_REPORT_STATE_KEY]
+            del st.session_state[LATEST_REPORT_STATE_KEY]
         if AGENT_CHAT_STATE_KEY in st.session_state:
-             del st.session_state[AGENT_CHAT_STATE_KEY]
+            del st.session_state[AGENT_CHAT_STATE_KEY]
         return
 
     from PIL import Image
@@ -173,7 +243,7 @@ def render_inference_page(
                 if cached_payload.get("reasoning"):
                     st.subheader("LLM Reasoning")
                     st.write(cached_payload["reasoning"])
-                render_chat_component(cached_payload, llm_qa_model)
+                render_chat_component(cached_payload, llm_provider, llm_qa_model)
         return
 
     with right_col:
@@ -209,11 +279,45 @@ def render_inference_page(
         if llm_enabled and payload["prediction"] == "PNEUMONIA":
             st.subheader("LLM Reasoning")
             with st.spinner("Generating radiology reasoning..."):
-                reasoning_result = maybe_run_reasoning(pil_image, payload, llm_model)
+                reasoning_result = maybe_run_reasoning(
+                    pil_image, payload, llm_provider, llm_model
+                )
             payload["reasoning_model"] = reasoning_result.get("model")
             if bool(reasoning_result.get("ok")):
                 payload["reasoning"] = str(reasoning_result.get("text", "")).strip()
                 st.write(payload["reasoning"])
+
+                # MedGemma evaluation — adapted from Radiology_Assistant_Evaluation.ipynb
+                # cell 5: feedback = judge.evaluate(q, answer, payload['impression'], ...)
+                if eval_enabled and payload["reasoning"]:
+                    st.subheader("MedGemma Evaluation")
+                    with st.spinner("Running MedGemma judge..."):
+                        try:
+                            judge_model, judge_tokenizer = load_medgemma_cached()
+                            eval_result = evaluate_response(
+                                model=judge_model,
+                                tokenizer=judge_tokenizer,
+                                question="What are the radiologic findings?",
+                                answer=payload["reasoning"],
+                                context=str(payload.get("impression", "")),
+                                ground_truth="Verify clinical accuracy.",
+                            )
+                            score = eval_result.get("correctness_score")
+                            justification = eval_result.get("justification")
+                            if score is not None:
+                                st.metric("Correctness Score", f"{score} / 5")
+                            if justification:
+                                st.info(justification)
+                            elif not score:
+                                # JSON parsing failed; show raw judge output
+                                st.caption("Raw judge output:")
+                                st.text(eval_result.get("raw", ""))
+                            payload["eval_score"] = score
+                            payload["eval_justification"] = justification
+                        except Exception as exc:
+                            st.warning(
+                                f"Evaluation failed: {type(exc).__name__}: {exc}"
+                            )
             else:
                 payload["reasoning_error"] = str(
                     reasoning_result.get("error", "Unknown error")
@@ -235,8 +339,8 @@ def render_inference_page(
         )
 
         st.session_state[LATEST_REPORT_STATE_KEY] = dict(payload)
-        st.session_state[AGENT_CHAT_STATE_KEY] = [] # Reset chat for new analysis
-        
+        st.session_state[AGENT_CHAT_STATE_KEY] = []  # Reset chat for new analysis
+
         st.download_button(
             label="Download Report JSON",
             data=json.dumps(payload, indent=2),
@@ -244,8 +348,8 @@ def render_inference_page(
             mime="application/json",
             width="stretch",
         )
-        
-        render_chat_component(payload, llm_qa_model)
+
+        render_chat_component(payload, llm_provider, llm_qa_model)
 
 
 def render_model_info_page(checkpoint_path: str) -> None:
@@ -279,7 +383,7 @@ def render_model_info_page(checkpoint_path: str) -> None:
     )
 
 
-def render_ask_agent_page(llm_qa_model: str) -> None:
+def render_ask_agent_page(llm_provider: str, llm_qa_model: str) -> None:
     st.subheader("Ask Agent")
     st.caption("Research prototype only. Not for clinical use.")
 
@@ -328,7 +432,7 @@ def render_ask_agent_page(llm_qa_model: str) -> None:
             }
         )
 
-    render_chat_component(payload, llm_qa_model)
+    render_chat_component(payload, llm_provider, llm_qa_model)
 
 
 def main() -> None:
@@ -359,28 +463,54 @@ def main() -> None:
             "LLM reasoning",
             value=False,
             disabled=(page != "Inference"),
-            help="Requires OPENAI_API_KEY in the environment or .env.",
+            help="Llama runs locally with GPU. OpenAI requires OPENAI_API_KEY.",
         )
-        llm_model = st.text_input(
-            "LLM Model",
-            value="gpt-4.1",
-            disabled=(page != "Inference"),
+        # MedGemma evaluation toggle — from Radiology_Assistant_Evaluation.ipynb.
+        # Uses google/medgemma-1.5-4b-it to score reasoning on a 1-5 scale.
+        eval_enabled = st.checkbox(
+            "MedGemma evaluation",
+            value=False,
+            disabled=(not llm_enabled or page != "Inference"),
+            help="Score LLM reasoning with MedGemma judge (requires GPU).",
         )
-        llm_qa_model = st.text_input(
-            "LLM Q&A Model",
-            value="gpt-4.1-mini",
-            disabled=(page == "Model Info"),
+        llm_provider = st.selectbox(
+            "LLM Provider",
+            [PROVIDER_LLAMA, PROVIDER_OPENAI],
+            index=0,
         )
+        if llm_provider == PROVIDER_OPENAI:
+            llm_model = st.text_input(
+                "LLM Model",
+                value="gpt-4.1",
+                disabled=(page != "Inference"),
+            )
+            llm_qa_model = st.text_input(
+                "LLM Q&A Model",
+                value="gpt-4.1-mini",
+                disabled=(page == "Model Info"),
+            )
+        else:
+            st.caption(f"Model: `{DEFAULT_LLAMA_MODEL}`")
+            llm_model = DEFAULT_LLAMA_MODEL
+            llm_qa_model = DEFAULT_LLAMA_MODEL
 
         st.divider()
         st.markdown("EECS E6893 Big Data Analytics Midterm Project")
 
     if page == "Inference":
-        render_inference_page(checkpoint_path, threshold, llm_enabled, llm_model, llm_qa_model)
+        render_inference_page(
+            checkpoint_path,
+            threshold,
+            llm_enabled,
+            llm_provider,
+            llm_model,
+            llm_qa_model,
+            eval_enabled=eval_enabled,
+        )
     elif page == "Model Info":
         render_model_info_page(checkpoint_path)
     else:
-        render_ask_agent_page(llm_qa_model)
+        render_ask_agent_page(llm_provider, llm_qa_model)
 
 
 if __name__ == "__main__":
