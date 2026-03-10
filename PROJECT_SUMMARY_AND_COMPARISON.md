@@ -8,7 +8,7 @@ Date: 2026-03-07
 
 ### Overview
 
-**Course:** EECS E6893 Big Data Analytics — Midterm Project
+**Course:** EECS E6895 Big Data Analytics — Midterm Project
 **Goal:** Two-stage chest X-ray diagnostic pipeline for pneumonia detection.
 **Runtime:** Google Colab with GPU (tested on A100).
 
@@ -264,7 +264,7 @@ Three-page app:
 
 | Dimension | Midterm Project | RAV |
 |---|---|---|
-| **Course / context** | EECS E6893 (Big Data Analytics) | Separate chest-radiology project; exact course context not verified in this repo |
+| **Course / context** | EECS E6895 (Big Data Analytics) | Separate chest-radiology project; exact course context not verified in this repo |
 | **Scope** | Single notebook pipeline, proof-of-concept | Production-grade prototype with ops infrastructure |
 | **Tracks** | Single (binary pneumonia) | Two active (POC binary + CheXpert 14-label), plus deferred tracks |
 | **Codebase size** | Small notebook-centric repo | Larger multi-directory application repo in the inspected snapshot |

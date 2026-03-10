@@ -1,6 +1,6 @@
 # Big Data Analytics Midterm Project
 
-EECS E6893: Big Data Analytics midterm project.
+EECS E6895: Big Data Analytics midterm project.
 
 Research prototype only. Not for clinical use.
 
