@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any, Mapping
 
 from PIL import Image
@@ -364,3 +365,94 @@ def answer_question_about_report_llama(
     if not text:
         raise RuntimeError("Llama model returned an empty answer.")
     return text
+
+
+def make_llama_generate_fn(
+    model, tokenizer, max_new_tokens: int = 128
+) -> Callable[[Image.Image, str], str]:
+    """Return a ``(image, prompt) -> str`` callable using the Llama backend.
+
+    Default ``max_new_tokens=128`` matches CLI parity.  The Streamlit UI uses
+    ``_llama_generate_with_image`` directly with ``max_new_tokens=400``.
+    """
+
+    def generate(image: Image.Image, prompt: str) -> str:
+        return _llama_generate_with_image(
+            model, tokenizer, image, prompt, max_new_tokens
+        )
+
+    return generate
+
+
+# ---------------------------------------------------------------------------
+# CheXagent backend
+# ---------------------------------------------------------------------------
+
+
+def load_chexagent(
+    model_name: str = "StanfordAIMI/CheXagent-2-3b-srrg-findings",
+    device: Any = "cuda",
+):
+    """Load a CheXagent model and tokenizer.
+
+    ``device`` is normalized to a plain string for ``device_map`` (HuggingFace
+    expects ``"cuda"`` / ``"cpu"``, not ``torch.device(...)``).
+    """
+    import torch
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    device_str = str(device)
+    torch_dtype = torch.bfloat16 if device_str != "cpu" else torch.float32
+    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name,
+        trust_remote_code=True,
+        torch_dtype=torch_dtype,
+        device_map=device_str,
+        low_cpu_mem_usage=True,
+    )
+    model.eval()
+    return model, tokenizer
+
+
+def make_chexagent_generate_fn(
+    model, tokenizer, device: Any = "cuda"
+) -> Callable[[Image.Image, str], str]:
+    """Return a ``(image, prompt) -> str`` callable using CheXagent."""
+    import os
+    import tempfile
+
+    device_str = str(device)
+
+    def generate(image: Image.Image, prompt: str) -> str:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp_file:
+            tmp_path = tmp_file.name
+
+        try:
+            image_to_save = image if image.mode == "RGB" else image.convert("RGB")
+            image_to_save.save(tmp_path)
+            query = tokenizer.from_list_format([{"image": tmp_path}, {"text": prompt}])
+            conversation = [
+                {"from": "system", "value": "You are a helpful assistant."},
+                {"from": "human", "value": query},
+            ]
+            input_ids = tokenizer.apply_chat_template(
+                conversation,
+                add_generation_prompt=True,
+                return_tensors="pt",
+            )
+            output = model.generate(
+                input_ids.to(device_str),
+                do_sample=False,
+                num_beams=1,
+                temperature=1.0,
+                top_p=1.0,
+                use_cache=True,
+                max_new_tokens=512,
+            )[0]
+            return tokenizer.decode(output[input_ids.size(1) : -1])
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+
+    return generate

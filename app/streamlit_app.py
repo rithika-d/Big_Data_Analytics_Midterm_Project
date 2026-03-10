@@ -436,12 +436,12 @@ def render_ask_agent_page(llm_provider: str, llm_qa_model: str) -> None:
 
 
 def main() -> None:
-    st.set_page_config(page_title="BDA - Chest X-ray Analyzer", layout="wide")
-    st.title("BDA - Chest X-ray Analyzer")
+    st.set_page_config(page_title="RAV - Chest X-ray Analyzer", layout="wide")
+    st.title("RAV - Chest X-ray Analyzer")
     st.caption("Research prototype only. Not for clinical use.")
 
     with st.sidebar:
-        st.title("BDA - Chest X-ray Analyzer")
+        st.title("RAV - Chest X-ray Analyzer")
         st.caption("Research prototype only. Not for clinical use.")
         st.caption(APP_VERSION)
 
@@ -495,7 +495,7 @@ def main() -> None:
             llm_qa_model = DEFAULT_LLAMA_MODEL
 
         st.divider()
-        st.markdown("EECS E6893 Big Data Analytics Midterm Project")
+        st.markdown("EECS E6895 Big Data Analytics Midterm Project")
 
     if page == "Inference":
         render_inference_page(

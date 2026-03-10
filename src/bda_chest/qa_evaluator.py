@@ -35,7 +35,7 @@ class MedGemmaJudge:
 
         self.device = device
         self.tokenizer = AutoTokenizer.from_pretrained(model_id)
-        
+
         quantization_config = None
         if load_in_4bit and str(device) != "cpu":
             quantization_config = BitsAndBytesConfig(
@@ -62,8 +62,10 @@ class MedGemmaJudge:
         context: str | None = None,
         ground_truth: str | None = None,
     ) -> dict[str, Any]:
-        prompt = self._build_evaluation_prompt(question, model_answer, context, ground_truth)
-        
+        prompt = self._build_evaluation_prompt(
+            question, model_answer, context, ground_truth
+        )
+
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
         with torch.no_grad():
             outputs = self.model.generate(
@@ -72,8 +74,10 @@ class MedGemmaJudge:
                 temperature=0.1,
                 do_sample=False,
             )
-        
-        response_text = self.tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
+
+        response_text = self.tokenizer.decode(
+            outputs[0][inputs.input_ids.shape[1] :], skip_special_tokens=True
+        )
         return self._parse_judge_response(response_text)
 
     def _build_evaluation_prompt(
@@ -87,16 +91,16 @@ class MedGemmaJudge:
             "You are an expert medical evaluation assistant. Your task is to evaluate the quality of a radiology assistant's answer "
             "to a user's question based on provided context (X-ray findings).\n\n"
         )
-        
+
         if context:
             prompt += f"CONTEXT (Findings):\n{context}\n\n"
-        
+
         prompt += f"USER QUESTION: {question}\n\n"
         prompt += f"ASSISTANT'S ANSWER: {model_answer}\n\n"
-        
+
         if ground_truth:
             prompt += f"GROUND TRUTH REFERENCE: {ground_truth}\n\n"
-            
+
         prompt += (
             "Evaluate the ASSISTANT'S ANSWER on the following criteria. For each, provide a score from 1 (poor) to 5 (excellent) "
             "and a brief justification.\n\n"
@@ -111,7 +115,6 @@ class MedGemmaJudge:
         return prompt
 
     def _parse_judge_response(self, text: str) -> dict[str, Any]:
-        # Simple JSON extraction logic
         try:
             start_idx = text.find("{")
             end_idx = text.rfind("}") + 1
@@ -126,21 +129,27 @@ class QuantitativeEvaluator:
     def __init__(self):
         try:
             import evaluate
+
             self.bleu = evaluate.load("bleu")
             self.rouge = evaluate.load("rouge")
         except ImportError:
-            print("Warning: 'evaluate' library not found. Quantitative metrics will be limited.")
+            print(
+                "Warning: 'evaluate' library not found. Quantitative metrics will be limited."
+            )
             self.bleu = None
             self.rouge = None
 
-    def calculate_metrics(self, predictions: list[str], references: list[str]) -> dict[str, float]:
+    def calculate_metrics(
+        self, predictions: list[str], references: list[str]
+    ) -> dict[str, float]:
         if not self.bleu or not self.rouge:
             return {"error": "Metrics library not available"}
 
-        # References should be a list of lists for BLEU
-        bleu_score = self.bleu.compute(predictions=predictions, references=[[r] for r in references])
+        bleu_score = self.bleu.compute(
+            predictions=predictions, references=[[r] for r in references]
+        )
         rouge_score = self.rouge.compute(predictions=predictions, references=references)
-        
+
         return {
             "bleu": bleu_score["bleu"],
             "rouge1": rouge_score["rouge1"],
@@ -159,25 +168,24 @@ class QAEvaluator:
         samples: list[QASample],
         qa_model_fn: Callable[[Image.Image, str, str | None], str],
     ) -> dict[str, Any]:
-        from .inference import load_image
+        from .utils import load_image
+
         results = []
         predictions = []
         references = []
-        
+
         for sample in samples:
-            # Load image from path
             try:
                 pil_image = load_image(sample.image_path)
             except Exception as e:
                 print(f"Error loading image {sample.image_path}: {e}")
                 continue
 
-            # Pass context if the model needs it (e.g. for RAG)
             model_answer = qa_model_fn(pil_image, sample.question, sample.context)
             predictions.append(model_answer)
             if sample.ground_truth:
                 references.append(sample.ground_truth)
-            
+
             qualitative_eval = None
             if self.judge:
                 qualitative_eval = self.judge.evaluate(
@@ -186,18 +194,19 @@ class QAEvaluator:
                     context=sample.context,
                     ground_truth=sample.ground_truth,
                 )
-            
-            results.append({
-                "sample": sample,
-                "model_answer": model_answer,
-                "qualitative": qualitative_eval
-            })
-            
+
+            results.append(
+                {
+                    "sample": sample,
+                    "model_answer": model_answer,
+                    "qualitative": qualitative_eval,
+                }
+            )
+
         summary = {}
         if references and len(predictions) == len(references):
-            summary["quantitative_metrics"] = self.quant_evaluator.calculate_metrics(predictions, references)
-            
-        return {
-            "results": results,
-            "summary": summary
-        }
+            summary["quantitative_metrics"] = self.quant_evaluator.calculate_metrics(
+                predictions, references
+            )
+
+        return {"results": results, "summary": summary}

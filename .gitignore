@@ -24,3 +24,4 @@ __pycache__/
 codex_prompts/
 AGENTS.md
 CLAUDE.md
+git-status.sh
