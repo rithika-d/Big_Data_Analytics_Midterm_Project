@@ -100,6 +100,7 @@ python -m src.diagnose \
   --backend llama
 ```
 
+<<<<<<< HEAD
 The `--backend` flag accepts `llama` or `chexagent`.
 
 ### Option 3: Colab Notebooks
@@ -123,3 +124,37 @@ Create a `.env` file in the project root (already gitignored):
 ```
 OPENAI_API_KEY=sk-...
 ```
+=======
+## Evaluation Pipeline
+
+The project includes a comprehensive evaluation pipeline to assess the Q&A capabilities of the radiology assistant using both qualitative (Med-Gemma judge) and quantitative (BLEU, ROUGE) metrics.
+
+### 1. Setup Credentials
+Ensure your `.env` file contains the following keys:
+- `OPENAI_API_KEY`: For the base model and Q&A.
+- `HF_TOKEN`: For downloading Med-Gemma (requires [gated access](https://huggingface.co/google/medgemma-1.5-4b-it)).
+- `KAGGLE_USERNAME` & `KAGGLE_KEY`: For downloading test images.
+
+### 2. Download Test Data
+Download a sample of the [Kaggle Chest X-Ray Pneumonia dataset](https://www.kaggle.com/datasets/paultimothymooney/chest-xray-pneumonia/data):
+```bash
+python scripts/download_test_images.py
+```
+This saves images to the `test_images/` directory.
+
+### 3. Generate Evaluation Samples
+Create the `qa_test_samples.json` file with ground truth and expert context:
+```bash
+python scripts/generate_test_json.py
+```
+
+### 4. Run Evaluation
+Run the evaluator using the Med-Gemma 1.5-4b-it judge:
+```bash
+python scripts/evaluate_radiology_assistant.py --model openai --use-judge
+```
+Options for `--model`: `openai` (default RAG), `chexagent`, or `llama`.
+Results will be saved to `evaluation_report.json`.
+
+The root `eva_x.py` module remains available so the original notebooks can still import it without changes.
+>>>>>>> fc7db37 (Evaluation pipeline)
