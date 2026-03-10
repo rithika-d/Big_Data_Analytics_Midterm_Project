@@ -21,7 +21,9 @@ src/bda_chest/                    Core package for the Streamlit app
   llm.py                          LLM backends (Llama local + OpenAI API)
   evaluation.py                   MedGemma judge for scoring LLM responses
   models.py, pipeline.py, ...     EVA-X loading, inference, reporting
-src/cxr_pipeline/                 Package extracted from original notebooks
+  training.py                       Trainer, datasets, transforms, checkpoint resume
+  metrics.py                        Full evaluation metrics (accuracy, AUROC, etc.)
+  qa_evaluator.py                   QA evaluation (MedGemma judge + BLEU/ROUGE)
 src/train.py                      CLI: classifier training
 src/diagnose.py                   CLI: classifier + LLM diagnosis
 scripts/smoke_test.py             Integration smoke test (CPU, no LLM)
@@ -96,7 +98,6 @@ Run diagnosis (classifier + LLM reasoning):
 python -m src.diagnose \
   --image ./test_image.jpeg \
   --checkpoint ./checkpoints/eva_x_tiny_binary_best.pt \
-  --pretrained-weights ./eva_x_tiny_patch16_merged520k_mim.pt \
   --backend llama
 ```
 

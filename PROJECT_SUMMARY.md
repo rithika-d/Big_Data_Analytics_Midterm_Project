@@ -28,17 +28,15 @@ An optional **MedGemma evaluation judge** scores LLM reasoning on a 1–5 correc
 
 ```
 app/streamlit_app.py              Streamlit UI (inference, chat, evaluation)
-src/bda_chest/                    Core package for the Streamlit app
-  llm.py                          LLM backends (Llama local + OpenAI API)
+src/bda_chest/                    Canonical Python package
+  llm.py                          LLM backends (Llama, CheXagent, OpenAI API)
   evaluation.py                   MedGemma judge for scoring LLM responses
   models.py, pipeline.py, ...     EVA-X loading, inference, reporting
+  training.py                     Trainer, datasets, transforms, checkpoint resume
+  metrics.py                      Full evaluation metrics (accuracy, AUROC, etc.)
+  qa_evaluator.py                 QA evaluation (MedGemma judge + BLEU/ROUGE)
+  utils.py                        Image loading, device selection, base64 helpers
   version.py                      App version constant
-src/cxr_pipeline/                 Package extracted from original notebooks
-  model.py, trainer.py, data.py   Training-side model wrapper, trainer, dataset
-  inference.py, diagnosis.py      Inference and diagnosis pipeline
-  chexagent.py, llama_backend.py  LLM backend adapters
-  evaluation.py, qa_evaluator.py  Evaluation helpers
-  eva_x.py, transforms.py        EVA-X copy and image transforms
 src/train.py                      CLI: classifier training
 src/diagnose.py                   CLI: classifier + LLM diagnosis
 scripts/
@@ -137,7 +135,7 @@ The `evaluate_full()` function computes:
 
 ---
 
-## Two-Stage Inference Pipeline: `diagnose_chest_xray()`
+## Two-Stage Inference Pipeline
 
 **Confidence-tiered prompting** based on classifier probability `p_abnormal`:
 
@@ -225,7 +223,6 @@ python -m src.train \
 python -m src.diagnose \
   --image ./test_image.jpeg \
   --checkpoint ./checkpoints/eva_x_tiny_binary_best.pt \
-  --pretrained-weights ./eva_x_tiny_patch16_merged520k_mim.pt \
   --backend llama
 ```
 
@@ -298,5 +295,5 @@ Key packages: `torch`, `torchvision`, `timm>=0.9.0`, `transformers`, `streamlit`
 - MedGemma evaluation judge for automated reasoning assessment
 - Streamlit web UI for interactive inference and Q&A
 - CLI and notebook entry points for flexibility across environments
-- Modular package structure (`bda_chest`, `cxr_pipeline`) with reusable components
+- Single canonical package (`bda_chest`) with reusable components
 - Simple to run — Streamlit app works on CPU for the classifier, GPU only needed for LLM

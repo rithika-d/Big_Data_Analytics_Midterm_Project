@@ -5,6 +5,66 @@ from typing import Any
 
 import pandas as pd
 import torch
+from torch import nn, optim
+from torch.utils.data import DataLoader
+from torchvision import datasets, transforms
+
+from .pipeline import build_inference_transform
+
+IMAGENET_MEAN = (0.485, 0.456, 0.406)
+IMAGENET_STD = (0.229, 0.224, 0.225)
+
+
+def get_train_transforms() -> transforms.Compose:
+    return transforms.Compose(
+        [
+            transforms.Resize(256),
+            transforms.RandomCrop(224),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+        ]
+    )
+
+
+def load_datasets(data_dir: str):
+    root = Path(data_dir)
+    train_dir = root / "train"
+    val_dir = root / "val"
+    test_dir = root / "test"
+    for split_dir in (train_dir, val_dir, test_dir):
+        if not split_dir.exists():
+            raise FileNotFoundError(f"Missing dataset split directory: {split_dir}")
+
+    train_dataset = datasets.ImageFolder(
+        root=str(train_dir), transform=get_train_transforms()
+    )
+    val_dataset = datasets.ImageFolder(
+        root=str(val_dir), transform=build_inference_transform()
+    )
+    test_dataset = datasets.ImageFolder(
+        root=str(test_dir), transform=build_inference_transform()
+    )
+    return train_dataset, val_dataset, test_dataset
+
+
+def create_dataloaders(
+    train_ds,
+    val_ds,
+    test_ds,
+    batch_size: int = 32,
+    num_workers: int = 4,
+):
+    train_loader = DataLoader(
+        train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers
+    )
+    val_loader = DataLoader(
+        val_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers
+    )
+    test_loader = DataLoader(
+        test_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers
+    )
+    return train_loader, val_loader, test_loader
 
 
 class Trainer:
@@ -169,7 +229,7 @@ def train_with_early_stopping(
                 },
                 ckpt_path_obj,
             )
-            print(f"✔ New best model at epoch {epoch + 1} | saved to: {ckpt_path_obj}")
+            print(f"New best model at epoch {epoch + 1} | saved to: {ckpt_path_obj}")
         else:
             epochs_no_improve += 1
             print(f"No improvement ({epochs_no_improve}/{patience})")
@@ -185,3 +245,27 @@ def train_with_early_stopping(
     history["best_epoch"] = best_state["epoch"]
     history["best_val_loss"] = best_state["best_val_loss"]
     return history
+
+
+def resume_from_checkpoint(
+    model: nn.Module,
+    ckpt_path: str,
+    lr: float = 1e-4,
+    weight_decay: float = 1e-4,
+) -> tuple[optim.Optimizer, dict[str, Any]]:
+    """Restore model + optimizer from a training checkpoint.
+
+    Returns ``(optimizer, metadata)`` where ``metadata["epoch"]`` is the **raw**
+    epoch stored in the checkpoint (0-indexed).  The caller is responsible for
+    computing ``start_epoch = metadata["epoch"] + 1``.
+    """
+    checkpoint = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+    model.load_state_dict(checkpoint["model_state_dict"])
+    optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+    optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+    metadata = {
+        "epoch": checkpoint["epoch"],
+        "best_val_loss": checkpoint["best_val_loss"],
+        "class_to_idx": checkpoint.get("class_to_idx"),
+    }
+    return optimizer, metadata
