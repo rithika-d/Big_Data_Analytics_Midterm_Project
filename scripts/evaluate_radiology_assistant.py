@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
-from typing import Any
 
 import torch
 from PIL import Image
@@ -20,10 +18,13 @@ if str(ROOT / "src") not in sys.path:
 # Load credentials from .env
 load_dotenv()
 
-from cxr_pipeline.qa_evaluator import QAEvaluator, QASample, MedGemmaJudge
-from cxr_pipeline.chexagent import load_chexagent, make_chexagent_generate_fn
-from cxr_pipeline.llama_backend import load_llama_model, make_llama_generate_fn
-from cxr_pipeline.inference import load_image
+from bda_chest.qa_evaluator import QAEvaluator, QASample, MedGemmaJudge
+from bda_chest.llm import (
+    load_chexagent,
+    make_chexagent_generate_fn,
+    load_llama_model,
+    make_llama_generate_fn,
+)
 
 
 def get_model_fn(model_type: str, device: str):
@@ -36,37 +37,71 @@ def get_model_fn(model_type: str, device: str):
         return lambda img, q, ctx: gen_fn(img, q)
     elif model_type == "openai":
         from bda_chest.llm import answer_question_about_report
+
         def openai_fn(image: Image.Image, question: str, context: str | None = None):
             payload = {"impression": context or "Findings available in context."}
             return answer_question_about_report(payload, question)
+
         return openai_fn
     else:
         raise ValueError(f"Unknown model type: {model_type}")
 
 
-
 def main():
-    parser = argparse.ArgumentParser(description="Evaluate Radiology Assistant QA capabilities.")
-    parser.add_argument("--test-data", type=str, default="qa_test_samples.json", help="Path to QA test samples JSON.")
-    parser.add_argument("--model", type=str, choices=["chexagent", "llama", "openai"], default="chexagent", help="Model to evaluate.")
-    parser.add_argument("--judge-model", type=str, default="google/medgemma-1.5-4b-it", help="Med-Gemma model ID for judging.")
-    parser.add_argument("--use-judge", action="store_true", help="Whether to use Med-Gemma for qualitative evaluation.")
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device to use.")
-    parser.add_argument("--output", type=str, default="evaluation_report.json", help="Path to save evaluation results.")
-    
+    parser = argparse.ArgumentParser(
+        description="Evaluate Radiology Assistant QA capabilities."
+    )
+    parser.add_argument(
+        "--test-data",
+        type=str,
+        default="qa_test_samples.json",
+        help="Path to QA test samples JSON.",
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        choices=["chexagent", "llama", "openai"],
+        default="chexagent",
+        help="Model to evaluate.",
+    )
+    parser.add_argument(
+        "--judge-model",
+        type=str,
+        default="google/medgemma-1.5-4b-it",
+        help="Med-Gemma model ID for judging.",
+    )
+    parser.add_argument(
+        "--use-judge",
+        action="store_true",
+        help="Whether to use Med-Gemma for qualitative evaluation.",
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="cuda" if torch.cuda.is_available() else "cpu",
+        help="Device to use.",
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="evaluation_report.json",
+        help="Path to save evaluation results.",
+    )
+
     args = parser.parse_args()
 
     # Load test data
     with open(args.test_data, "r") as f:
         data = json.load(f)
-    
+
     samples = [
         QASample(
             image_path=s.get("image_path"),
             question=s.get("question"),
             ground_truth=s.get("ground_truth"),
-            context=s.get("context")
-        ) for s in data
+            context=s.get("context"),
+        )
+        for s in data
     ]
 
     print(f"Loaded {len(samples)} samples for evaluation.")
@@ -93,14 +128,14 @@ def main():
 
     # Save results
     with open(args.output, "w") as f:
-        # Convert QASample objects to dict for JSON serialization
+
         def serialize(obj):
             if isinstance(obj, QASample):
                 return {
                     "image_path": obj.image_path,
                     "question": obj.question,
                     "ground_truth": obj.ground_truth,
-                    "context": obj.context
+                    "context": obj.context,
                 }
             return obj.__dict__ if hasattr(obj, "__dict__") else str(obj)
 

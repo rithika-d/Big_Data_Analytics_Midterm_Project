@@ -32,6 +32,22 @@ def select_device(hint: str | None = "auto") -> torch.device:
     return torch.device("cpu")
 
 
+def load_image(source: str) -> Image.Image:
+    """Load an image from a local path or URL and return as RGB PIL Image.
+
+    ``requests`` is imported lazily inside the URL branch — it is a transitive
+    dependency (via streamlit, transformers, huggingface_hub) and is not pinned
+    explicitly in requirements.txt.
+    """
+    if source.startswith(("http://", "https://")):
+        import requests  # transitive dep, not explicitly pinned
+
+        response = requests.get(source, timeout=30)
+        response.raise_for_status()
+        return Image.open(io.BytesIO(response.content)).convert("RGB")
+    return Image.open(source).convert("RGB")
+
+
 def pil_to_base64(
     image: Image.Image,
     fmt: str = "JPEG",

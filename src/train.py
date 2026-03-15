@@ -7,10 +7,15 @@ import torch
 import torch.nn as nn
 from torch import optim
 
-from .cxr_pipeline.data import create_dataloaders, load_datasets
-from .cxr_pipeline.evaluation import evaluate_full
-from .cxr_pipeline.model import create_model, resume_from_checkpoint
-from .cxr_pipeline.trainer import Trainer, train_with_early_stopping
+from .bda_chest.training import (
+    Trainer,
+    train_with_early_stopping,
+    load_datasets,
+    create_dataloaders,
+    resume_from_checkpoint,
+)
+from .bda_chest.metrics import evaluate_full
+from .bda_chest.models import create_model_for_training
 
 
 def parse_args() -> argparse.Namespace:
@@ -55,7 +60,7 @@ def main() -> None:
     start_epoch = 0
 
     if args.resume_from:
-        model = create_model(args.pretrained_weights, device)
+        model = create_model_for_training(args.pretrained_weights, device)
         optimizer, metadata = resume_from_checkpoint(
             model,
             args.resume_from,
@@ -65,7 +70,7 @@ def main() -> None:
         best_val_loss = metadata["best_val_loss"]
         start_epoch = metadata["epoch"] + 1
     else:
-        model = create_model(args.pretrained_weights, device)
+        model = create_model_for_training(args.pretrained_weights, device)
         optimizer = optim.AdamW(
             model.parameters(), lr=args.lr, weight_decay=args.weight_decay
         )
