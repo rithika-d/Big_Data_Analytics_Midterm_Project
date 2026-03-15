@@ -101,6 +101,30 @@ python -m src.diagnose \
   --backend llama
 ```
 
+The `--backend` flag accepts `llama` or `chexagent`.
+
+### Option 3: Colab Notebooks
+
+The original notebooks are designed for Google Colab with GPU. They mount Google Drive for dataset and checkpoint access.
+
+- `Big_Data_Analytics_Midterm_Project.ipynb` — Training + CheXagent inference
+- `Big_Data_Analytics_Midterm2.ipynb` — Llama inference with confidence-tiered prompting
+- `Radiology_Assistant_Evaluation.ipynb` — End-to-end evaluation with MedGemma judge
+
+## Environment Variables
+
+| Variable | Required for |
+|---|---|
+| `OPENAI_API_KEY` | OpenAI LLM provider in Streamlit UI; Evaluation notebook |
+| `HF_TOKEN` | Downloading gated models (MedGemma) |
+| `KAGGLE_USERNAME` / `KAGGLE_KEY` | Downloading dataset in Evaluation notebook |
+
+Create a `.env` file in the project root (already gitignored):
+
+```
+OPENAI_API_KEY=sk-...
+```
+=======
 ## Evaluation Pipeline
 
 The project includes a comprehensive evaluation pipeline to assess the Q&A capabilities of the radiology assistant using both qualitative (Med-Gemma judge) and quantitative (BLEU, ROUGE) metrics.
@@ -133,26 +157,3 @@ Options for `--model`: `openai` (default RAG), `chexagent`, or `llama`.
 Results will be saved to `evaluation_report.json`.
 
 The root `eva_x.py` module remains available so the original notebooks can still import it without changes.
-The `--backend` flag accepts `llama` or `chexagent`.
-
-### Option 3: Colab Notebooks
-
-The original notebooks are designed for Google Colab with GPU. They mount Google Drive for dataset and checkpoint access.
-
-- `Big_Data_Analytics_Midterm_Project.ipynb` — Training + CheXagent inference
-- `Big_Data_Analytics_Midterm2.ipynb` — Llama inference with confidence-tiered prompting
-- `Radiology_Assistant_Evaluation.ipynb` — End-to-end evaluation with MedGemma judge
-
-## Environment Variables
-
-| Variable | Required for |
-|---|---|
-| `OPENAI_API_KEY` | OpenAI LLM provider in Streamlit UI; Evaluation notebook |
-| `HF_TOKEN` | Downloading gated models (MedGemma) |
-| `KAGGLE_USERNAME` / `KAGGLE_KEY` | Downloading dataset in Evaluation notebook |
-
-Create a `.env` file in the project root (already gitignored):
-
-```
-OPENAI_API_KEY=sk-...
-```
