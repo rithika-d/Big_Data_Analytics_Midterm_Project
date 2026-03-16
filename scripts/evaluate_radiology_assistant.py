@@ -18,8 +18,8 @@ if str(ROOT / "src") not in sys.path:
 # Load credentials from .env
 load_dotenv()
 
-from bda_chest.qa_evaluator import QAEvaluator, QASample, MedGemmaJudge
-from bda_chest.llm import (
+from rav.qa_evaluator import QAEvaluator, QASample, MedGemmaJudge
+from rav.llm import (
     load_chexagent,
     make_chexagent_generate_fn,
     load_llama_model,
@@ -36,7 +36,7 @@ def get_model_fn(model_type: str, device: str):
         gen_fn = make_llama_generate_fn(*load_llama_model())
         return lambda img, q, ctx: gen_fn(img, q)
     elif model_type == "openai":
-        from bda_chest.llm import answer_question_about_report
+        from rav.llm import answer_question_about_report
 
         def openai_fn(image: Image.Image, question: str, context: str | None = None):
             payload = {"impression": context or "Findings available in context."}
@@ -49,7 +49,11 @@ def get_model_fn(model_type: str, device: str):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Evaluate Radiology Assistant QA capabilities."
+        description=(
+            "Evaluate Radiology Assistant QA capabilities. "
+            "Requires pre-generated test data: run scripts/download_test_images.py "
+            "then scripts/generate_test_json.py first."
+        ),
     )
     parser.add_argument(
         "--test-data",

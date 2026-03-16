@@ -5,10 +5,10 @@ import json
 
 import torch
 
-from .bda_chest.pipeline import load_inference_bundle, infer_from_pil
-from .bda_chest.utils import load_image
-from .bda_chest.reporting import classify_confidence_tier
-from .bda_chest.llm import build_reasoning_prompt
+from .rav.pipeline import load_inference_bundle, infer_from_pil
+from .rav.utils import load_image
+from .rav.reporting import classify_confidence_tier
+from .rav.llm import build_reasoning_prompt
 
 
 def parse_args() -> argparse.Namespace:
@@ -50,12 +50,12 @@ def main() -> None:
     prompt = build_reasoning_prompt(p_abnormal, tier)
 
     if args.backend == "llama":
-        from .bda_chest.llm import load_llama_model, make_llama_generate_fn
+        from .rav.llm import load_llama_model, make_llama_generate_fn
 
         llm_model, tokenizer = load_llama_model()
         generate_fn = make_llama_generate_fn(llm_model, tokenizer)
     else:
-        from .bda_chest.llm import load_chexagent, make_chexagent_generate_fn
+        from .rav.llm import load_chexagent, make_chexagent_generate_fn
 
         device = bundle.device
         llm_model, tokenizer = load_chexagent(device=device)

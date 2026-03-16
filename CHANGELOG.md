@@ -6,11 +6,11 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - Added Llama-3.2-11B-Vision-Radiology-mini as the default LLM provider in the Streamlit UI, with a dropdown to toggle to OpenAI.
-- Added MedGemma evaluation judge (`src/bda_chest/evaluation.py`) to score LLM reasoning on a 1–5 correctness scale, adapted from the Evaluation notebook.
+- Added MedGemma evaluation judge (`src/rav/evaluation.py`) to score LLM reasoning on a 1–5 correctness scale, adapted from the Evaluation notebook.
 - Added MedGemma evaluation toggle in the Streamlit sidebar.
 - Added `.env` placeholder for `OPENAI_API_KEY` (gitignored).
 - Added gap analysis comparing LLM functionality across notebooks and Streamlit UI.
-- Added a `bda_chest` package with EVA-X model loading, binary reporting, LLM helpers (Llama, CheXagent, OpenAI), training, evaluation metrics, QA evaluator, and shared utilities.
+- Added a `rav` package with EVA-X model loading, binary reporting, LLM helpers (Llama, CheXagent, OpenAI), training, evaluation metrics, QA evaluator, and shared utilities.
 - Added a Streamlit app with Inference, Model Info, and Ask Agent pages for the chest X-ray workflow.
 - Added `python -m src.train` and `python -m src.diagnose` CLI entry points for training and diagnosis workflows.
 - Added `scripts/smoke_test.py` for CPU checkpoint restore, inference, payload, import, and LLM-key validation checks.
@@ -18,7 +18,10 @@ All notable changes to this project will be documented in this file.
 - Added a tracked `.gitignore` for prompt artifacts, local caches, and workspace directories.
 
 ### Changed
-- Consolidated `cxr_pipeline` into `bda_chest` — one canonical package for all consumers (Streamlit, CLI, evaluation scripts).
+- Renamed package from `bda_chest` to `rav` to match project name.
+- Consolidated `cxr_pipeline` into `rav` — one canonical package for all consumers (Streamlit, CLI, evaluation scripts).
+- Rewrote README with final paper results, demo screenshots, ROC curve, and team names.
+- Added final paper PDF and demo video frame screenshots to `screens/`.
 - Rewrote `src/diagnose.py` with lazy LLM loading — LLM backend only loaded when classifier predicts abnormal.
 - Dropped `--pretrained-weights` from `src/diagnose.py` (inference checkpoint is self-contained).
 - Renamed display name from "BDA" to "RAV" in the Streamlit UI.

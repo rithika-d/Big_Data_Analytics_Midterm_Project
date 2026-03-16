@@ -28,7 +28,7 @@ An optional **MedGemma evaluation judge** scores LLM reasoning on a 1–5 correc
 
 ```
 app/streamlit_app.py              Streamlit UI (inference, chat, evaluation)
-src/bda_chest/                    Canonical Python package
+src/rav/                    Canonical Python package
   llm.py                          LLM backends (Llama, CheXagent, OpenAI API)
   evaluation.py                   MedGemma judge for scoring LLM responses
   models.py, pipeline.py, ...     EVA-X loading, inference, reporting
@@ -187,15 +187,15 @@ The `Radiology_Assistant_Evaluation.ipynb` notebook provides the Colab-native ve
 
 ## Streamlit Web UI
 
-The recommended way to interact with the project. Three functional areas:
+The recommended way to interact with the project. Three pages:
 
-1. **Inference** — Upload a chest X-ray, run the EVA-X classifier, view probability and prediction. Optionally invoke the LLM for radiologic findings.
-2. **Ask Agent** — Q&A chatbot grounded in the current inference report context. Ask follow-up questions about findings.
-3. **MedGemma Evaluation** — Score the LLM's reasoning output on a 1–5 scale using the MedGemma judge.
+1. **Inference** — Upload a chest X-ray, run the EVA-X classifier, view probability and prediction. Optionally invoke the LLM for radiologic findings. MedGemma evaluation is available as a sidebar toggle.
+2. **Model Info** — Checkpoint metadata and class mappings.
+3. **Ask Agent** — Q&A chatbot grounded in the current inference report context. Ask follow-up questions about findings.
 
 **Sidebar settings:**
 - **LLM Provider**: Toggle between Llama (local GPU) and OpenAI (API).
-- **MedGemma evaluation**: Enable/disable the evaluation judge.
+- **MedGemma evaluation**: Enable/disable the evaluation judge (sidebar toggle on Inference page).
 - LLM features are optional — the EVA-X classifier works without them.
 
 ---
@@ -222,7 +222,7 @@ python -m src.train \
 # Run diagnosis (classifier + LLM reasoning)
 python -m src.diagnose \
   --image ./test_image.jpeg \
-  --checkpoint ./checkpoints/eva_x_tiny_binary_best.pt \
+  --checkpoint ./eva_x_tiny_binary_best.pt \
   --backend llama
 ```
 
@@ -295,5 +295,5 @@ Key packages: `torch`, `torchvision`, `timm>=0.9.0`, `transformers`, `streamlit`
 - MedGemma evaluation judge for automated reasoning assessment
 - Streamlit web UI for interactive inference and Q&A
 - CLI and notebook entry points for flexibility across environments
-- Single canonical package (`bda_chest`) with reusable components
+- Single canonical package (`rav`) with reusable components
 - Simple to run — Streamlit app works on CPU for the classifier, GPU only needed for LLM

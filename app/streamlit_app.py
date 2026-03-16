@@ -15,8 +15,8 @@ if str(ROOT) not in sys.path:
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from bda_chest.evaluation import evaluate_response, load_medgemma_judge
-from bda_chest.llm import (
+from rav.evaluation import evaluate_response, load_medgemma_judge
+from rav.llm import (
     DEFAULT_LLAMA_MODEL,
     analyze_xray_image,
     analyze_xray_image_llama,
@@ -24,9 +24,9 @@ from bda_chest.llm import (
     answer_question_about_report_llama,
     load_llama_model,
 )
-from bda_chest.models import checkpoint_metadata, load_checkpoint
-from bda_chest.pipeline import infer_from_pil, load_inference_bundle
-from bda_chest.version import APP_VERSION
+from rav.models import checkpoint_metadata, load_checkpoint
+from rav.pipeline import infer_from_pil, load_inference_bundle
+from rav.version import APP_VERSION
 
 LATEST_REPORT_STATE_KEY = "latest_inference_payload"
 AGENT_CHAT_STATE_KEY = "agent_chat_messages"

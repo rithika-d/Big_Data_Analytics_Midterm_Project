@@ -15,15 +15,15 @@ import numpy as np
 from PIL import Image
 import torch
 
-from bda_chest import llm
-from bda_chest.llm import get_openai_client
-from bda_chest.models import EvaXBinaryModel, load_checkpoint
-from bda_chest.pipeline import (
+from rav import llm
+from rav.llm import get_openai_client
+from rav.models import EvaXBinaryModel, load_checkpoint
+from rav.pipeline import (
     InferenceBundle,
     build_inference_transform,
     infer_from_pil,
 )
-from bda_chest.reporting import classify_confidence_tier, probs_to_payload
+from rav.reporting import classify_confidence_tier, probs_to_payload
 
 
 def expect(condition: bool, message: str) -> None:
@@ -35,12 +35,12 @@ def main() -> int:
     checkpoint_path = ROOT / "eva_x_tiny_binary_best.pt"
 
     imported = [
-        "bda_chest.version",
-        "bda_chest.utils",
-        "bda_chest.models",
-        "bda_chest.reporting",
-        "bda_chest.pipeline",
-        "bda_chest.llm",
+        "rav.version",
+        "rav.utils",
+        "rav.models",
+        "rav.reporting",
+        "rav.pipeline",
+        "rav.llm",
     ]
     print(f"Imported modules: {', '.join(imported)}")
 

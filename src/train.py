@@ -7,15 +7,15 @@ import torch
 import torch.nn as nn
 from torch import optim
 
-from .bda_chest.training import (
+from .rav.training import (
     Trainer,
     train_with_early_stopping,
     load_datasets,
     create_dataloaders,
     resume_from_checkpoint,
 )
-from .bda_chest.metrics import evaluate_full
-from .bda_chest.models import create_model_for_training
+from .rav.metrics import evaluate_full
+from .rav.models import create_model_for_training
 
 
 def parse_args() -> argparse.Namespace:
