@@ -1,5 +1,6 @@
 .DS_Store
 
+archive/
 private/
 .venv/
 .env
@@ -19,6 +20,7 @@ __pycache__/
 .ipynb_checkpoints/
 
 # Agents
+.agent-sessions/
 .claude/
 .codex/
 codex_prompts/
