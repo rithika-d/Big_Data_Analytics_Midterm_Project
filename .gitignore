@@ -23,7 +23,9 @@ __pycache__/
 .agent-sessions/
 .claude/
 .codex/
-codex_prompts/
+review/
+codex-prompts/
+claude-prompts/
 AGENTS.md
 CLAUDE.md
 git-status.sh
