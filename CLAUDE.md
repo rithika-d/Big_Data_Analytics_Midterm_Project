@@ -66,3 +66,9 @@ For Llama radiology model: `unsloth`, `accelerate`
 For CheXagent: `transformers` with `trust_remote_code=True`
 
 The `timm` version matters — `eva_x.py` imports from `timm.models.eva` and `timm.layers`, which require `timm>=0.9.0`.
+
+## Durable Documentation
+
+- Retrospectives live in `docs/retrospectives/`.
+- Project KB entries live in `docs/knowledge-base/{reference,decisions,learnings,qa}/`.
+- PM completion index entries live in `pm/done.md`.
