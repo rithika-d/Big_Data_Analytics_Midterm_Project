@@ -10,6 +10,9 @@ All notable changes to this project will be documented in this file.
 - Added `pm/done.md` as a durable index for closeout records.
 - Added a notebook-refactor closeout retrospective in `docs/retrospectives/2026-06-09_notebook-refactor-runnable-scripts-closeout.md`.
 - Added project KB entries for notebook-package extraction and the historical notebook-to-CLI architecture decision under `docs/knowledge-base/`.
+- Added the historical-session retrospective `docs/retrospectives/2026-06-09_big-refactor-consolidation-closeout.md`.
+- Added project KB entries for refactor-review guardrails and the open CI question under `docs/knowledge-base/`.
+- Added minimal PM tracking surfaces (`pm/backlog.md`, `pm/issues.md`, `pm/ideas.md`, `pm/done.md`) seeded from the closeout capture.
 - Added Llama-3.2-11B-Vision-Radiology-mini as the default LLM provider in the Streamlit UI, with a dropdown to toggle to OpenAI.
 - Added MedGemma evaluation judge (`src/rav/evaluation.py`) to score LLM reasoning on a 1–5 correctness scale, adapted from the Evaluation notebook.
 - Added MedGemma evaluation toggle in the Streamlit sidebar.
