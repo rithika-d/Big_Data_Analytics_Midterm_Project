@@ -13,6 +13,7 @@ canonical: true
 sources:
   - docs/retrospectives/2026-06-09_streamlit-ui-delivery-closeout.md
   - docs/retrospectives/2026-06-09_repo-hygiene-closeout.md
+  - docs/retrospectives/2026-06-09_notebook-refactor-runnable-scripts-closeout.md
 related:
   - docs/knowledge-base/learnings/2026-06-09_streamlit-inference-wiring.md
 ---
@@ -40,6 +41,8 @@ review, blame, and future rebases harder than they need to be.
 
 ## Evidence
 
+- `git show --stat 27156ef`
 - `git show --stat 77f6f40`
+- `docs/retrospectives/2026-06-09_notebook-refactor-runnable-scripts-closeout.md`
 - `docs/retrospectives/2026-06-09_streamlit-ui-delivery-closeout.md`
 - `docs/retrospectives/2026-06-09_repo-hygiene-closeout.md`
